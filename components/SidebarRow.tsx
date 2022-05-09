@@ -13,7 +13,9 @@ const SidebarRow = ({ Icon, title }: Props) => {
     duration-200 hover:bg-gray-100"
     >
       <Icon className="h-6 w-6" />
-      <p className="group-hover:text-twitterBlue">{title}</p>
+      <p className="hidden text-base font-light group-hover:text-twitterBlue md:inline-flex lg:text-xl">
+        {title}
+      </p>
     </div>
   )
 }
