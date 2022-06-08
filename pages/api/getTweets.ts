@@ -16,6 +16,5 @@ export default async function handler(
 ) {
   const tweets = await sanityClient.fetch(feedQuery)
 
-  console.log(tweets)
   res.status(200).json({ tweets })
 }
