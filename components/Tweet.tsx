@@ -4,9 +4,11 @@ import {
   SwitchHorizontalIcon,
   UploadIcon,
 } from '@heroicons/react/outline'
-import React, { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import React, { ReactFragment, useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import TimeAgo from 'react-timeago'
-import { Comment, Tweet } from '../typings'
+import { Comment, CommentBody, Tweet } from '../typings'
 import { fetchComments } from '../utils/fetchComments'
 
 interface Props {
@@ -15,10 +17,40 @@ interface Props {
 
 const Tweet = ({ tweet }: Props) => {
   const [comments, setComments] = useState<Comment[]>([])
+  const [commentBoxVisible, setCommentBoxVisible] = useState<boolean>(false)
+  const [commentInput, setCommentInput] = useState<string>('')
+
+  const { data: session } = useSession()
 
   const refreshComments = async () => {
     const comments: Comment[] = await fetchComments(tweet._id)
     setComments(comments)
+  }
+
+  const handleComment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const commentToast = toast.loading('Posting Comment...')
+
+    // Comment logic
+    const comment: CommentBody = {
+      comment: commentInput,
+      tweetId: tweet._id,
+      username: session?.user?.name || 'Unknown User',
+      profileImg: session?.user?.image || 'https://links.papareact.com/gll',
+    }
+
+    const result = await fetch(`/api/addComment`, {
+      body: JSON.stringify(comment),
+      method: 'POST',
+    })
+
+    toast.success('Comment Posted!', {
+      id: commentToast,
+    })
+
+    setCommentInput('')
+    setCommentBoxVisible(false)
+    refreshComments()
   }
 
   useEffect(() => {
@@ -58,7 +90,10 @@ const Tweet = ({ tweet }: Props) => {
       </div>
 
       <div className="mt-5 flex justify-between">
-        <div className="flex cursor-pointer items-center space-x-3 text-gray-400">
+        <div
+          onClick={() => session && setCommentBoxVisible(!commentBoxVisible)}
+          className="flex cursor-pointer items-center space-x-3 text-gray-400"
+        >
           <ChatAlt2Icon className="h-5 w-5" />
           <p>{comments.length}</p>
         </div>
@@ -77,9 +112,27 @@ const Tweet = ({ tweet }: Props) => {
       </div>
 
       {/* Comment Box logic */}
+      {commentBoxVisible && (
+        <form className="mt-3 flex space-x-3" onSubmit={handleComment}>
+          <input
+            className="flex-1 rounded-lg bg-gray-100 p-2 outline-none"
+            type="text"
+            placeholder="write a comment"
+            value={commentInput}
+            onChange={(e) => setCommentInput(e.target.value)}
+          />
+          <button
+            disabled={!commentInput}
+            className="text-twitterBlue disabled:text-gray-200"
+            type="submit"
+          >
+            Post
+          </button>
+        </form>
+      )}
 
       {comments.length > 0 && (
-        <div className="my-2 mt-5 max-h-44 space-y-5 overflow-y-scroll border-t border-gray-100 p-5">
+        <div className="my-2 mt-5 max-h-44 space-y-5 overflow-y-scroll border-t border-gray-100 p-5 scrollbar-hide">
           {comments.map((comment) => (
             <div key={comment._id} className="relative flex space-x-2">
               <hr className="absolute left-5 top-10 h-8 border-x border-twitterBlue/30" />
