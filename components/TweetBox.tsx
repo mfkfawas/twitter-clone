@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { Dispatch, SetStateAction, useRef, useState } from 'react'
 import {
   CalendarIcon,
   EmojiHappyIcon,
@@ -7,8 +7,15 @@ import {
   SearchCircleIcon,
 } from '@heroicons/react/outline'
 import { useSession } from 'next-auth/react'
+import { Tweet, TweetBody } from '../typings'
+import { fetchTweets } from '../utils/fetchTweets'
+import toast from 'react-hot-toast'
 
-const TweetBox = () => {
+interface Props {
+  setTweets: Dispatch<SetStateAction<Tweet[]>>
+}
+
+const TweetBox = ({ setTweets }: Props) => {
   const [input, setInput] = useState<string>('')
   const [image, setImage] = useState<string>('')
   const { data: session } = useSession()
@@ -24,6 +31,41 @@ const TweetBox = () => {
 
     setImage(imageInputRef.current.value)
     imageInputRef.current.value = ''
+    setImageUrlBoxIsOpen(false)
+  }
+
+  const postTweet = async () => {
+    const tweetInfo: TweetBody = {
+      text: input,
+      image,
+      username: session?.user?.name || 'Unknown User',
+      profileImg: session?.user?.image || 'https://links.papareact.com/gll',
+    }
+
+    const res = await fetch('/api/addTweets', {
+      method: 'POST',
+      body: JSON.stringify(tweetInfo),
+    })
+
+    const json = await res.json()
+
+    const newTweets = await fetchTweets()
+    setTweets(newTweets)
+
+    toast('Tweet Posted!', {
+      icon: '✅',
+    })
+
+    return json
+  }
+
+  const handleSubmit = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    e.preventDefault()
+
+    postTweet()
+
+    setInput('')
+    setImage('')
     setImageUrlBoxIsOpen(false)
   }
 
@@ -57,6 +99,7 @@ const TweetBox = () => {
               <LocationMarkerIcon className="h-5 w-5" />
             </div>
             <button
+              onClick={handleSubmit}
               disabled={!input || !session}
               className="rounded-full bg-twitterBlue px-5 py-2 font-bold text-white disabled:opacity-40"
             >
@@ -84,7 +127,7 @@ const TweetBox = () => {
 
           {image && (
             <img
-              className="mt-10 h-40 w-full rounded-xl object-contain shadow-lg"
+              className="mt-10 h-40 rounded-xl object-contain shadow-lg"
               src={image}
               alt=""
             />
